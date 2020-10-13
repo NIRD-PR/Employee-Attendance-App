@@ -25,6 +25,9 @@ dependencies:
     sdk: flutter
   mobile_number: ^1.0.3
   http: ^0.12.2
+  geolocator: ^5.3.2
+  intl: ^0.16.1
+  shared_preferences: ^0.5.12
 
 
   # The following adds the Cupertino Icons font to your application.
