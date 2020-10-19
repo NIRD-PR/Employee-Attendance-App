@@ -30,10 +30,13 @@ class _HomeState extends State<Home> {
   bool userLocationBool = false;
   bool inTimeOrOutTime = true;
   bool yesNo = false;
+  bool isValidUser = false;
   double testVar;
+  bool fail=false;
 
   String _mobileNumber = '';
   String alertMessage_1 = "Do you wish to override your IN Time?";
+  String errorMsg = "An error occurred while recording the attendance";
   String alertMessage_2 = "";
 //  List<SimCard> _simCard = <SimCard>[];
   Future<bool> outTimeFuture;
@@ -52,7 +55,6 @@ class _HomeState extends State<Home> {
     _prefs.then((SharedPreferences prefs) {
       getVariables(prefs);
     });
-    getCurrentLocation();
     MobileNumber.listenPhonePermission((isPermissionGranted) {
       if (isPermissionGranted) {
         initMobileNumberState();
@@ -60,6 +62,8 @@ class _HomeState extends State<Home> {
     });
 
     initMobileNumberState();
+
+    getCurrentLocation();
   }
 
   getVariables(SharedPreferences prefs){
@@ -116,7 +120,7 @@ class _HomeState extends State<Home> {
   }
 
 
-  createAlertDialog(BuildContext context){
+  createAlertDialog(BuildContext context) async{
     return   showDialog(context: context,builder: (context){
       return AlertDialog(
         title: Text(alertMessage_1),
@@ -124,25 +128,39 @@ class _HomeState extends State<Home> {
           MaterialButton(
             elevation: 5.0,
             child: Text("Yes"),
-            onPressed: (){
+            onPressed: () async {
               if(inTimeOrOutTime) {
-                setState(() {
-                  inTime = DateFormat.jm().format(DateTime.now());
-                  userLocationBool = false;
-                  yesNo = true;
+                bool success = await recordInTime();
+                if(success){
+                  fail=false;
+                  setState(() {
+                    inTime = DateFormat.jm().format(DateTime.now());
+                    userLocationBool = false;
+                    yesNo = true;
+                  }
+                  );
+                  print("In time recorded $inTime");
                 }
-                );
-                print("In time recorded $inTime");
+                else{
+                  fail = true;
+                }
               }
               else
               {
-                setState(() {
-                  outTime = DateFormat.jm().format(DateTime.now());
-                  userLocationBool = false;
-                  yesNo = true;
+                bool success = await recordOutTime();
+                if(success) {
+                  fail = false;
+                  setState(() {
+                    outTime = DateFormat.jm().format(DateTime.now());
+                    userLocationBool = false;
+                    yesNo = true;
+                  }
+                  );
+                  print("Out time recorded $outTime");
                 }
-                );
-                print("Out time recorded $outTime");
+                else{
+                  fail = true;
+                }
               }
               setVariables();
               Navigator.of(context).pop();
@@ -157,7 +175,7 @@ class _HomeState extends State<Home> {
                 userLocationBool = false;
               }
               else {
-                print("Out-Time recorded $outTime");
+                print("Out-Time not recorded $outTime");
                 userLocationBool = false;
               }
               yesNo = false;
@@ -165,6 +183,23 @@ class _HomeState extends State<Home> {
               Navigator.of(context).pop();
             },
           )
+        ],
+      );
+    });
+  }
+
+  createErrorDialog(BuildContext context){
+    return   showDialog(context: context,builder: (context){
+      return AlertDialog(
+        title: Text(errorMsg),
+        actions: [
+          MaterialButton(
+            elevation: 5.0,
+            child: Text("Close"),
+            onPressed: (){
+              Navigator.of(context).pop();
+            },
+          ),
         ],
       );
     });
@@ -227,7 +262,7 @@ class _HomeState extends State<Home> {
     var _onPressedInTime;
     var _onPressedOutTime;
 
-    if(_inTimeEnabled)
+    if(_inTimeEnabled && isValidUser)
     {
       _onPressedInTime = () async {
         inTimeOrOutTime = true;
@@ -237,17 +272,29 @@ class _HomeState extends State<Home> {
         {
           if(inTime.isEmpty)
           {
-            setState(() {
-              inTime = DateFormat.jm().format(DateTime.now());
+            bool success = await recordInTime();
+            if(success){
+              setState(() {
+                inTime = DateFormat.jm().format(DateTime.now());
+              }
+              );
+              print("In time recorded $inTime");
+              createTimeDialog(context);
             }
-            );
-            print("In time recorded $inTime");
-            createTimeDialog(context);
+            else{
+              createErrorDialog(context);
+            }
           }
           else{
             await createAlertDialog(context);
-            if(yesNo)
-              createTimeDialog(context);
+            if(yesNo){
+              if(fail){
+                createErrorDialog(context);
+              }
+              else {
+                createTimeDialog(context);
+              }
+            }
           }
           alertMessage_2 = "In-Time Updated Successfully $inTime";
           userLocationBool = false;
@@ -262,7 +309,7 @@ class _HomeState extends State<Home> {
       };
     }
 
-    if(_outTimeEnabled)
+    if(_outTimeEnabled  && isValidUser)
     {
       _onPressedOutTime = () async {
         inTimeOrOutTime = false;
@@ -270,17 +317,28 @@ class _HomeState extends State<Home> {
         await getCurrentLocation();
         if(userLocationBool) {
           if (outTime.isEmpty) {
-            setState(() {
-              outTime = DateFormat.jm().format(DateTime.now());
+            bool success = await recordOutTime();
+            if(success){
+              setState(() {
+                outTime = DateFormat.jm().format(DateTime.now());
+              });
+              print("Out time recorded $outTime");
+              createTimeDialog(context);
             }
-            );
-            print("Out time recorded $outTime");
-            createTimeDialog(context);
+            else{
+              createErrorDialog(context);
+            }
           }
           else {
             await createAlertDialog(context);
-            if(yesNo)
-              createTimeDialog(context);
+            if(yesNo){
+              if(fail){
+                createErrorDialog(context);
+              }
+              else {
+                createTimeDialog(context);
+              }
+            }
           }
           alertMessage_2 = "Out-Time Updated Successfully $outTime";
           userLocationBool = false;
@@ -288,7 +346,7 @@ class _HomeState extends State<Home> {
         else
         {
           createLocationDialog(context);
-          print("Too far from Target");
+          print("you are not inside the target area");
         }
         setVariables();
         //outTime();
@@ -446,8 +504,13 @@ class _HomeState extends State<Home> {
                               if(error.isNotEmpty){
                                 return Column(
                                   children: [
-                                    Text ("An error occured"),
-                                    Text("${snapshot.error}"),
+                                    Text (
+                                    "Failed to validate Mobile No- $_mobileNumber",
+                                    style: TextStyle(
+                                        letterSpacing: 1.5,
+                                        fontSize: 15
+                                    )
+                                    ),
                                   ],
                                 );
                               }
@@ -460,6 +523,9 @@ class _HomeState extends State<Home> {
                                   )
                                 );
                               }
+                            }
+                            if(_mobileNumber.isEmpty){
+                              initMobileNumberState();
                             }
                             return CircularProgressIndicator();
                           }
@@ -580,6 +646,51 @@ class _HomeState extends State<Home> {
     );
   }
 
+  Future<bool> recordInTime() async{
+    print('inside recordInTime');
+    final http.Response response = await http.post(
+      'http://career.nirdpr.in/Services/Service.svc/markIntimeattendance',
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8'
+      },
+      body: jsonEncode(<String, String>{
+        'jsonreq':'{\"latitude\":\"$lat\",\"longitude\":\"$lon\",\"phone\":\"$_mobileNumber\"}',
+        'key' : 'TmlyZHByQ0lDVDc4Ng='
+      }),
+    );
+
+    print(response.body);
+
+    if (response.statusCode == 200) {
+      print("Status code is 200");
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  Future<bool> recordOutTime() async{
+    print('inside recordOutTime');
+    final http.Response response = await http.post(
+      'http://career.nirdpr.in/Services/Service.svc/markOuttimeattendance',
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8'
+      },
+      body: jsonEncode(<String, String>{
+      'mobileNo': '9849298244', //'9849298244'
+      'key': 'TmlyZHByQ0lDVDc4Ng=='
+      }),
+    );
+
+    print(response.body);
+
+    if (response.statusCode == 200) {
+      print("Status code is 200");
+      return true;
+    } else {
+      return false;
+    }
+  }
 
   Future<bool> isValidLocationDummy(double lat,double lon) async{
     print('inside isValidLocationDummy');
@@ -598,8 +709,8 @@ class _HomeState extends State<Home> {
         'Content-Type': 'application/json; charset=UTF-8'
       },
       body: jsonEncode(<String, String>{
-        'lattitude': '51.6223',
-        'longitude': '94.8753',
+        'lattitude': lat.toString(), // "29.130298" // lat.toString()
+        'longitude': lon.toString(), // "75.729856" // lon.toString()
         'key': 'TmlyZHByQ0lDVDc4Ng==',
       }),
     );
@@ -625,6 +736,51 @@ class _HomeState extends State<Home> {
     }
   }
 
+
+  Future<UserDetails> getUserData(String mobileNo) async {
+    print('inside getUserData');
+    print(mobileNo);
+    if(mobileNo.isEmpty){
+      await initMobileNumberState();
+    }
+    if(mobileNo.isEmpty){
+      initMobileNumberState();
+    }
+    http.Response response;
+    try{
+      response = await http.post(
+        'http://career.nirdpr.in/Services/Service.svc/getemployeedetails',
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8'
+        },
+        body: jsonEncode(<String, String>{
+          'mobileNo': mobileNo, //'9849298244' // TODO: should be mobileNo
+          'key': 'TmlyZHByQ0lDVDc4Ng=='
+        }),
+      );
+    }
+    catch (_){
+      throw Error();
+    }
+
+    print('reaches here');
+    print(response.body);
+
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      UserDetails user = UserDetails.fromJson(json.decode(response.body));
+      user.parseString('');
+      if(user.name.isNotEmpty){
+        setState(() {
+          isValidUser = true;
+        });
+      }
+      return user;
+    }
+    else {
+      int val = response.statusCode;
+      throw Exception('Request returned with status code : $val');
+    }
+  }
 }
 
 class ValidLocation {
@@ -693,28 +849,3 @@ Future<UserDetails> getUserDataDummy(String mobileNo) async{
   return dummyFuture;
 }
 
-Future<UserDetails> getUserData(String mobileNo) async {
-  print('inside getUserData');
-  print(mobileNo);
-  final http.Response response = await http.post(
-    'http://career.nirdpr.in/Services/Service.svc/getemployeedetails',
-    headers: <String, String>{
-      'Content-Type': 'application/json; charset=UTF-8'
-    },
-    body: jsonEncode(<String, String>{
-      'mobileNo': '9013322645', // TODO: should be mobileNo
-      'key': 'TmlyZHByQ0lDVDc4Ng=='
-    }),
-  );
-
-  print('reaches here');
-  print(response.body);
-
-  if (response.statusCode == 201 || response.statusCode == 200) {
-    return UserDetails.fromJson(json.decode(response.body));
-  }
-  else {
-    int val = response.statusCode;
-    throw Exception('Request returned with status code : $val');
-  }
-}
