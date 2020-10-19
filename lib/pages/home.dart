@@ -51,22 +51,30 @@ class _HomeState extends State<Home> {
   @override
   void initState() {
     super.initState();
-//    getVariables();
     _prefs.then((SharedPreferences prefs) {
       getVariables(prefs);
     });
-    MobileNumber.listenPhonePermission((isPermissionGranted) {
-      if (isPermissionGranted) {
-        initMobileNumberState();
-      } else {}
-    });
 
-    initMobileNumberState();
+//    getPhoneNumber();
+
+//    MobileNumber.listenPhonePermission((isPermissionGranted) {
+//      if (isPermissionGranted) {
+//        initMobileNumberState();
+//      } else {}
+//    });
+//
+//    initMobileNumberState();
 
     getCurrentLocation();
   }
+//
+//  getPhoneNumber() async{
+//    createPhoneNumberDialog(context).then((value) {
+//      print(value);
+//    });
+//  }
 
-  getVariables(SharedPreferences prefs){
+  getVariables(SharedPreferences prefs) async{
     _inTimeEnabled = prefs.getBool('inTimeEnabled') ?? true;
     _outTimeEnabled = prefs.getBool('outTimeEnabled') ?? false;
     userLocationBool = prefs.getBool('userLocationBool') ?? false;
@@ -81,6 +89,17 @@ class _HomeState extends State<Home> {
     else{
       prefs.setString('lastDate', DateFormat('dd-MM-yyyy').format(DateTime.now()));
     }
+    _mobileNumber = prefs.getString('mobileNumber') ?? '';
+    if(_mobileNumber.isEmpty){
+      await createPhoneNumberDialog(context).then((value) {
+        print(value);
+        _mobileNumber = value;
+        prefs.setString('mobileNumber', _mobileNumber);
+      });
+    }
+
+    user = getUserData();
+    setState(() {});
   }
 
   setVariables() async{
@@ -95,30 +114,56 @@ class _HomeState extends State<Home> {
   }
 
   // Platform messages are asynchronous, so we initialize in an async method.
-  Future<void> initMobileNumberState() async {
-    if (!await MobileNumber.hasPhonePermission) {
-      await MobileNumber.requestPhonePermission;
-      return;
-    }
+//  Future<void> initMobileNumberState() async {
+//    if (!await MobileNumber.hasPhonePermission) {
+//      await MobileNumber.requestPhonePermission;
+//      return;
+//    }
+//
+//    // Platform messages may fail, so we use a try/catch PlatformException.
+//    try {
+//    _mobileNumber = await MobileNumber.mobileNumber;
+//    print(_mobileNumber.length);
+//    if(_mobileNumber.length < 10){
+//      _mobileNumber = await createPhoneNumberDialog(context);
+//    }
+//    else{
+//      String mobNo = '';
+//      for(int i=_mobileNumber.length-1, j=0; i>=0 && j<10; i--, j++){
+//        mobNo += _mobileNumber[i];
+//      }
+//      _mobileNumber = String.fromCharCodes(mobNo.codeUnits.reversed);
+//    }
+//    print(_mobileNumber);
+//    } on PlatformException catch (e) {
+//      print("Failed to get mobile number because of '${e.message}'");
+//    }
+//    user = getUserData();
+//    setState((){});
+//  }
 
-    // Platform messages may fail, so we use a try/catch PlatformException.
-    try {
-    _mobileNumber = await MobileNumber.mobileNumber;
-    print(_mobileNumber.length);
-    String mobNo = '';
-    for(int i=_mobileNumber.length-1, j=0; i>=0 && j<10; i--, j++){
-      mobNo += _mobileNumber[i];
-    }
-    _mobileNumber = String.fromCharCodes(mobNo.codeUnits.reversed);
-    print(_mobileNumber);
-//    _simCard = await MobileNumber.getSimCards;
-    } on PlatformException catch (e) {
-      print("Failed to get mobile number because of '${e.message}'");
-    }
-    user = getUserData(_mobileNumber);
-    setState((){});
+  Future<String> createPhoneNumberDialog(BuildContext context){
+
+    TextEditingController customController = TextEditingController();
+
+    return   showDialog(context: context,builder: (context) {
+      return AlertDialog(
+        title : Text("Enter you registered Mobile Number"),
+        content: TextField(
+          controller: customController,
+        ),
+        actions: [
+          MaterialButton(
+            elevation: 5.0,
+            child: Text("Submit"),
+            onPressed: (){
+              Navigator.of(context).pop(customController.text.toString());
+            },
+          )
+        ],
+      );
+    });
   }
-
 
   createAlertDialog(BuildContext context) async{
     return   showDialog(context: context,builder: (context){
@@ -309,7 +354,7 @@ class _HomeState extends State<Home> {
       };
     }
 
-    if(_outTimeEnabled  && isValidUser)
+    if(_outTimeEnabled && isValidUser)
     {
       _onPressedOutTime = () async {
         inTimeOrOutTime = false;
@@ -349,7 +394,6 @@ class _HomeState extends State<Home> {
           print("you are not inside the target area");
         }
         setVariables();
-        //outTime();
       };
     }
 
@@ -358,289 +402,289 @@ class _HomeState extends State<Home> {
         title: const Text('Employee Attendance App'),
         centerTitle: true,
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(15, 2, 15, 0) ,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: <Widget>[
-                SizedBox(
-                  width: 110,
-                  height: 110,
-                  child: CircleAvatar(
-                    backgroundImage: AssetImage('assets/logo.png'),
-                    radius: 50,
-                  ),
-                ),
-                SizedBox(width: 10),
-                Flexible(
-                  child: Text(
-                    'Nation Institute of\nRural Development &\nPanchayati Raj',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 19,
-                      letterSpacing: 2,
-                      fontWeight: FontWeight.bold,
+      body: ListView(
+        children: <Widget>[ Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(15, 2, 15, 0) ,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: <Widget>[
+                  SizedBox(
+                    width: 110,
+                    height: 110,
+                    child: CircleAvatar(
+                      backgroundImage: AssetImage('assets/logo.png'),
+                      radius: 50,
                     ),
                   ),
-                ),
-              ],
+                  SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      'Nation Institute of\nRural Development &\nPanchayati Raj',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 19,
+                        letterSpacing: 2,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
 //          fillCards(),
-          SizedBox(height: 40),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(15, 5, 15, 12),
-            child: Center(
-              child: Column(
-                children: [
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: <Widget>[
-                      FutureBuilder<UserDetails>(
-                          future: user,
-                          builder: (context, snapshot) {
-                            if (snapshot.hasData) {
+            SizedBox(height: 40),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(15, 5, 15, 12),
+              child: Center(
+                child: Column(
+                  children: [
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: <Widget>[
+                        FutureBuilder<UserDetails>(
+                            future: user,
+                            builder: (context, snapshot) {
+                              if (snapshot.hasData) {
 //                        return fillUserCard();
-                              UserDetails _user = snapshot.data;
-                              _user.parseString(_mobileNumber);
-                              return Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Column(
-                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: <Widget>[
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.person,
-                                            size: 17,
-                                          ),
-                                          SizedBox(width: 2,),
-                                          Text(
-                                            "NAME",
-                                            style: TextStyle(
-                                              letterSpacing: 1.5,
+                                UserDetails _user = snapshot.data;
+                                _user.parseString(_mobileNumber);
+                                return Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Column(
+                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: <Widget>[
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.person,
+                                              size: 17,
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                      SizedBox(height:4),
-                                      Text(
-                                        "${_user.name}",
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                          letterSpacing: 1.5,
-                                        ),
-                                      ),
-                                      SizedBox(height: 10),
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.business,
-                                            size: 17,
-                                          ),
-                                          SizedBox(width: 2,),
-                                          Text(
-                                            "CENTER NAME",
-                                            style: TextStyle(
-                                              letterSpacing: 1.5,
+                                            SizedBox(width: 2,),
+                                            Text(
+                                              "NAME",
+                                              style: TextStyle(
+                                                letterSpacing: 1.5,
+                                              ),
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                      SizedBox(height:4),
-                                      Text(
-                                        "${_user.centerName}",
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                          letterSpacing: 1.5,
+                                          ],
                                         ),
-                                      ),
+                                        SizedBox(height:4),
+                                        Text(
+                                          "${_user.name}",
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 1.5,
+                                          ),
+                                        ),
+                                        SizedBox(height: 10),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.business,
+                                              size: 17,
+                                            ),
+                                            SizedBox(width: 2,),
+                                            Text(
+                                              "CENTER NAME",
+                                              style: TextStyle(
+                                                letterSpacing: 1.5,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        SizedBox(height:4),
+                                        Text(
+                                          "${_user.centerName}",
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 1.5,
+                                          ),
+                                        ),
 //                                  Text("Center Name -  ${_user.centerName}"),
 //                                  Text("Mobile No -  ${_user.mobileNo}"),
-                                    ],
-                                  ),
-                                  SizedBox(width: 10),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: <Widget>[
-                                      Row(
-                                        children: <Widget>[
-                                          Icon(
-                                            Icons.phone,
-                                            size: 17,
-                                          ),
-                                          SizedBox(width: 2,),
-                                          Text(
-                                            "Mobile No",
-                                            style: TextStyle(
-                                              letterSpacing: 1.5,
+                                      ],
+                                    ),
+                                    SizedBox(width: 10),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: <Widget>[
+                                        Row(
+                                          children: <Widget>[
+                                            Icon(
+                                              Icons.phone,
+                                              size: 17,
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                      SizedBox(height:4),
-                                      Text(
-                                        "${_user.mobileNo}",
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                          letterSpacing: 1.5,
+                                            SizedBox(width: 2,),
+                                            Text(
+                                              "Mobile No",
+                                              style: TextStyle(
+                                                letterSpacing: 1.5,
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              );
-                            }
-                            else if (snapshot.hasError) {
-                              String error = snapshot.error.toString();
-                              if(error.isNotEmpty){
-                                return Column(
-                                  children: [
-                                    Text (
-                                    "Failed to validate Mobile No- $_mobileNumber",
-                                    style: TextStyle(
-                                        letterSpacing: 1.5,
-                                        fontSize: 15
-                                    )
+                                        SizedBox(height:4),
+                                        Text(
+                                          "${_user.mobileNo}",
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 1.5,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 );
                               }
-                              else{
-                                Text (
-                                  "Failed to validate Mobile No",
-                                  style: TextStyle(
-                                    letterSpacing: 1.5,
-                                    fontSize: 15
-                                  )
-                                );
+                              else if (snapshot.hasError) {
+                                String error = snapshot.error.toString();
+                                if(error.isNotEmpty){
+                                  return Column(
+                                    children: [
+                                      Text (
+                                      "Failed to validate Mobile No- $_mobileNumber",
+                                      style: TextStyle(
+                                          letterSpacing: 1.5,
+                                          fontSize: 15
+                                      )
+                                      ),
+                                    ],
+                                  );
+                                }
+                                else{
+                                  Text (
+                                    "Failed to validate Mobile No",
+                                    style: TextStyle(
+                                      letterSpacing: 1.5,
+                                      fontSize: 15
+                                    )
+                                  );
+                                }
                               }
+                              return CircularProgressIndicator();
                             }
-                            if(_mobileNumber.isEmpty){
-                              initMobileNumberState();
-                            }
-                            return CircularProgressIndicator();
-                          }
-                      )
-                    ],
-                  ),
-                  SizedBox(height: 50),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: <Widget>[
-                      //fillCards()
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          SizedBox(
-                            height: 60,
-                            width: 160,
-                            child: RaisedButton(
-                              onPressed: _onPressedInTime,      //Defined above
-                              child: Text(
-                                'Record IN\nTime',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-                              color: Colors.lightGreen[500],
-                            ),
-                          ),
-                          SizedBox(
-                            height: 60,
-                            width: 160,
-                            child: RaisedButton(
-                              onPressed: _onPressedOutTime,
-                              child: Text(
-                                'Record OUT\nTime',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-                              color: Colors.deepOrangeAccent,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 30),
-                      Text(
-                        '${DateFormat('dd-MM-yyyy').format(DateTime.now())}',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold
                         )
-                      ),
-                      SizedBox(height: 5),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children : [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                "In Time : ",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.2,
+                      ],
+                    ),
+                    SizedBox(height: 50),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: <Widget>[
+                        //fillCards()
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            SizedBox(
+                              height: 60,
+                              width: 160,
+                              child: RaisedButton(
+                                onPressed: _onPressedInTime,      //Defined above
+                                child: Text(
+                                  'Record IN\nTime',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.2,
+                                  ),
                                 ),
+                                color: Colors.lightGreen[500],
                               ),
-                              Text(
-                                "Out Time : ",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.2,
+                            ),
+                            SizedBox(
+                              height: 60,
+                              width: 160,
+                              child: RaisedButton(
+                                onPressed: _onPressedOutTime,
+                                child: Text(
+                                  'Record OUT\nTime',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.2,
+                                  ),
                                 ),
+                                color: Colors.deepOrangeAccent,
                               ),
-                            ],
-                          ),
-                          SizedBox(width:8),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text("$inTime",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 19,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.2,
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 30),
+                        Text(
+                          '${DateFormat('dd-MM-yyyy').format(DateTime.now())}',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold
+                          )
+                        ),
+                        SizedBox(height: 5),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children : [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  "In Time : ",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.2,
+                                  ),
                                 ),
-                              ),
-                              Text("$outTime",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 19,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.2,
+                                Text(
+                                  "Out Time : ",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.2,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      )
-                    ],
-                  )
-                ],
+                              ],
+                            ),
+                            SizedBox(width:8),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("$inTime",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 19,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                                Text("$outTime",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 19,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  ],
+                ),
               ),
             ),
-          ),
+          ],
+        ),
         ],
       ),
     );
@@ -654,7 +698,7 @@ class _HomeState extends State<Home> {
         'Content-Type': 'application/json; charset=UTF-8'
       },
       body: jsonEncode(<String, String>{
-        'jsonreq':'{\"latitude\":\"$lat\",\"longitude\":\"$lon\",\"phone\":\"$_mobileNumber\"}',
+        'jsonreq':'{\"latitude\":\"$lat\",\"longitude\":\"$lon\",\"phone\":\"$_mobileNumber\"}', // TODO:$_mobileNumber
         'key' : 'TmlyZHByQ0lDVDc4Ng='
       }),
     );
@@ -663,7 +707,13 @@ class _HomeState extends State<Home> {
 
     if (response.statusCode == 200) {
       print("Status code is 200");
-      return true;
+      Map<String, dynamic> result = jsonDecode(response.body);
+      if(result['d'] == 'InTime attendance marked successfully'){
+        return true;
+      }
+      else{
+        return false;
+      }
     } else {
       return false;
     }
@@ -677,7 +727,7 @@ class _HomeState extends State<Home> {
         'Content-Type': 'application/json; charset=UTF-8'
       },
       body: jsonEncode(<String, String>{
-      'mobileNo': '9849298244', //'9849298244'
+      'mobileNo': _mobileNumber, //'9849298244' TODO:_mobileNumber
       'key': 'TmlyZHByQ0lDVDc4Ng=='
       }),
     );
@@ -686,7 +736,13 @@ class _HomeState extends State<Home> {
 
     if (response.statusCode == 200) {
       print("Status code is 200");
-      return true;
+      Map<String, dynamic> result = jsonDecode(response.body);
+      if(result['d'] == 'OutTime attendance marked successfully'){
+        return true;
+      }
+      else{
+        return false;
+      }
     } else {
       return false;
     }
@@ -709,8 +765,8 @@ class _HomeState extends State<Home> {
         'Content-Type': 'application/json; charset=UTF-8'
       },
       body: jsonEncode(<String, String>{
-        'lattitude': lat.toString(), // "29.130298" // lat.toString()
-        'longitude': lon.toString(), // "75.729856" // lon.toString()
+        'lattitude': lat.toString(), // "29.130298" // TODO: lat.toString()
+        'longitude': lon.toString(), // "75.729856" // TODO: lon.toString()
         'key': 'TmlyZHByQ0lDVDc4Ng==',
       }),
     );
@@ -737,15 +793,12 @@ class _HomeState extends State<Home> {
   }
 
 
-  Future<UserDetails> getUserData(String mobileNo) async {
+  Future<UserDetails> getUserData() async {
     print('inside getUserData');
-    print(mobileNo);
-    if(mobileNo.isEmpty){
-      await initMobileNumberState();
-    }
-    if(mobileNo.isEmpty){
-      initMobileNumberState();
-    }
+    print(_mobileNumber);
+//    if(_mobileNumber.isEmpty){
+//      await
+//    }
     http.Response response;
     try{
       response = await http.post(
@@ -754,7 +807,7 @@ class _HomeState extends State<Home> {
           'Content-Type': 'application/json; charset=UTF-8'
         },
         body: jsonEncode(<String, String>{
-          'mobileNo': mobileNo, //'9849298244' // TODO: should be mobileNo
+          'mobileNo': _mobileNumber, //'9849298244' // TODO: _mobileNumber
           'key': 'TmlyZHByQ0lDVDc4Ng=='
         }),
       );
@@ -837,15 +890,5 @@ class UserDetails{
       d: json['d'],
     );
   }
-}
-
-Future<UserDetails> getUserDataDummy(String mobileNo) async{
-  print('inside getUserDataDummy');
-  final dummyFuture = Future.delayed(
-    Duration(seconds: 10),
-        () => UserDetails(name: "Vivek Sengar", centerName: "Hyderabad", mobileNo: mobileNo),
-  );
-
-  return dummyFuture;
 }
 
