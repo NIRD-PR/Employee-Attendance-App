@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
+//import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:mobile_number/mobile_number.dart';
+//import 'package:flutter/services.dart';
+//import 'package:mobile_number/mobile_number.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:geolocator/geolocator.dart';
@@ -179,11 +179,11 @@ class _HomeState extends State<Home> {
                 if(success){
                   fail=false;
                   setState(() {
+                    _inTimeEnabled = false;
                     inTime = DateFormat.jm().format(DateTime.now());
                     userLocationBool = false;
                     yesNo = true;
-                  }
-                  );
+                  });
                   print("In time recorded $inTime");
                 }
                 else{
@@ -196,17 +196,18 @@ class _HomeState extends State<Home> {
                 if(success) {
                   fail = false;
                   setState(() {
+                    _outTimeEnabled = false;
                     outTime = DateFormat.jm().format(DateTime.now());
                     userLocationBool = false;
                     yesNo = true;
-                  }
-                  );
+                  });
                   print("Out time recorded $outTime");
                 }
                 else{
                   fail = true;
                 }
               }
+              yesNo = true;
               setVariables();
               Navigator.of(context).pop();
             },
@@ -311,26 +312,13 @@ class _HomeState extends State<Home> {
     {
       _onPressedInTime = () async {
         inTimeOrOutTime = true;
-        alertMessage_1 = "Do you wish to override your IN Time?";
+        alertMessage_1 = "Once IN-Time is recorded, it can not be changed. Do you want to continue?";
+//        alertMessage_1 = "Do you wish to override your IN Time?";
         await getCurrentLocation();
         if(userLocationBool)
         {
           if(inTime.isEmpty)
           {
-            bool success = await recordInTime();
-            if(success){
-              setState(() {
-                inTime = DateFormat.jm().format(DateTime.now());
-              }
-              );
-              print("In time recorded $inTime");
-              createTimeDialog(context);
-            }
-            else{
-              createErrorDialog(context);
-            }
-          }
-          else{
             await createAlertDialog(context);
             if(yesNo){
               if(fail){
@@ -340,6 +328,31 @@ class _HomeState extends State<Home> {
                 createTimeDialog(context);
               }
             }
+//            if(yesNo){
+//              bool success = await recordInTime();
+//              if(success){
+//                setState(() {
+//                  inTime = DateFormat.jm().format(DateTime.now());
+//                });
+//                print("In time recorded $inTime");
+//                createTimeDialog(context);
+//              }
+//              else{
+//                createErrorDialog(context);
+//              }
+//            }
+          }
+          else{
+            _inTimeEnabled = false;
+//            await createAlertDialog(context);
+//            if(yesNo){
+//              if(fail){
+//                createErrorDialog(context);
+//              }
+//              else {
+//                createTimeDialog(context);
+//              }
+//            }
           }
           alertMessage_2 = "In-Time Updated Successfully $inTime";
           userLocationBool = false;
@@ -358,23 +371,11 @@ class _HomeState extends State<Home> {
     {
       _onPressedOutTime = () async {
         inTimeOrOutTime = false;
-        alertMessage_1 = "Do you wish to override your OUT Time?";
+        alertMessage_1 = "Once OUT-Time is recorded, it can not be changed. Do you want to continue?";
+//        alertMessage_1 = "Do you wish to override your OUT Time?";
         await getCurrentLocation();
         if(userLocationBool) {
           if (outTime.isEmpty) {
-            bool success = await recordOutTime();
-            if(success){
-              setState(() {
-                outTime = DateFormat.jm().format(DateTime.now());
-              });
-              print("Out time recorded $outTime");
-              createTimeDialog(context);
-            }
-            else{
-              createErrorDialog(context);
-            }
-          }
-          else {
             await createAlertDialog(context);
             if(yesNo){
               if(fail){
@@ -384,6 +385,31 @@ class _HomeState extends State<Home> {
                 createTimeDialog(context);
               }
             }
+//            if(yesNo){
+//              bool success = await recordOutTime();
+//              if(success){
+//                setState(() {
+//                  outTime = DateFormat.jm().format(DateTime.now());
+//                });
+//                print("Out time recorded $outTime");
+//                createTimeDialog(context);
+//              }
+//              else{
+//                createErrorDialog(context);
+//              }
+//            }
+          }
+          else {
+            _outTimeEnabled = false;
+//            await createAlertDialog(context);
+//            if(yesNo){
+//              if(fail){
+//                createErrorDialog(context);
+//              }
+//              else {
+//                createTimeDialog(context);
+//              }
+//            }
           }
           alertMessage_2 = "Out-Time Updated Successfully $outTime";
           userLocationBool = false;
