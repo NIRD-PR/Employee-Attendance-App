@@ -2,16 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
-//import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-//import 'package:flutter/services.dart';
-//import 'package:mobile_number/mobile_number.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-//import 'package:permission_handler/permission_handler.dart';
 
 
 class Home extends StatefulWidget {
@@ -20,7 +16,6 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-//  PermissionStatus _status;
 
   Future<SharedPreferences> _prefs = SharedPreferences.getInstance();
   double lat;
@@ -38,15 +33,11 @@ class _HomeState extends State<Home> {
   String alertMessage_1 = "Do you wish to override your IN Time?";
   String errorMsg = "An error occurred while recording the attendance";
   String alertMessage_2 = "";
-//  List<SimCard> _simCard = <SimCard>[];
-  Future<bool> outTimeFuture;
-  Future<bool> inTimeFuture;
   Future<UserDetails> user;
 
-  Future<bool> userLocation;
-  dynamic currentTime;
   String inTime = '';
   String outTime = '';
+  String date = '';
 
   @override
   void initState() {
@@ -54,6 +45,8 @@ class _HomeState extends State<Home> {
     _prefs.then((SharedPreferences prefs) {
       getVariables(prefs);
     });
+
+    getCurrentLocation();
 
 //    getPhoneNumber();
 
@@ -65,30 +58,21 @@ class _HomeState extends State<Home> {
 //
 //    initMobileNumberState();
 
-    getCurrentLocation();
   }
-//
-//  getPhoneNumber() async{
-//    createPhoneNumberDialog(context).then((value) {
-//      print(value);
-//    });
-//  }
+
 
   getVariables(SharedPreferences prefs) async{
-    _inTimeEnabled = prefs.getBool('inTimeEnabled') ?? true;
-    _outTimeEnabled = prefs.getBool('outTimeEnabled') ?? false;
-    userLocationBool = prefs.getBool('userLocationBool') ?? false;
+//    userLocationBool = prefs.getBool('userLocationBool') ?? false;
     inTimeOrOutTime = prefs.getBool('inTimeOrOutTime') ?? true;
-    yesNo = prefs.getBool('yesNo') ?? false;
-    String lastDate = prefs.getString('lastDate') ?? '';
-    String currentDate = DateFormat('dd-MM-yyyy').format(DateTime.now());
-    if(lastDate == currentDate){
-      inTime = prefs.getString('inTime') ?? '';
-      outTime = prefs.getString('outTime') ?? '';
-    }
-    else{
-      prefs.setString('lastDate', DateFormat('dd-MM-yyyy').format(DateTime.now()));
-    }
+//    String lastDate = prefs.getString('lastDate') ?? '';
+//    String currentDate = DateFormat('dd-MM-yyyy').format(DateTime.now());
+//    if(lastDate == currentDate){
+//      inTime = prefs.getString('inTime') ?? '';
+//      outTime = prefs.getString('outTime') ?? '';
+//    }
+//    else{
+//      prefs.setString('lastDate', DateFormat('dd-MM-yyyy').format(DateTime.now()));
+//    }
     _mobileNumber = prefs.getString('mobileNumber') ?? '';
     if(_mobileNumber.isEmpty){
       await createPhoneNumberDialog(context).then((value) {
@@ -100,17 +84,31 @@ class _HomeState extends State<Home> {
 
     user = getUserData();
     setState(() {});
+    UserDetails usr = await user;
+    if(usr.inTime != null){
+      date = DateFormat('dd-MM-yyyy').format(usr.inTime);
+      inTime = DateFormat.jm().format(usr.inTime);
+      _inTimeEnabled = false;
+      _outTimeEnabled = true;
+    }
+    else{
+      date = DateFormat('dd-MM-yyyy').format(DateTime.now());
+    }
+    if(usr.outTime != null){
+      outTime = DateFormat.jm().format(usr.outTime);
+      _outTimeEnabled = false;
+    }
+    setState((){});
   }
 
   setVariables() async{
     SharedPreferences prefs = await _prefs;
     prefs.setBool('inTimeEnabled', _inTimeEnabled);
     prefs.setBool('outTimeEnabled', _outTimeEnabled);
-    prefs.setBool('userLocationBool', userLocationBool);
+//    prefs.setBool('userLocationBool', userLocationBool);
     prefs.setBool('inTimeOrOutTime', inTimeOrOutTime);
-    prefs.setBool('yesNo', yesNo);
-    prefs.setString('inTime', inTime);
-    prefs.setString('outTime', outTime);
+//    prefs.setString('inTime', inTime);
+//    prefs.setString('outTime', outTime);
   }
 
   // Platform messages are asynchronous, so we initialize in an async method.
@@ -178,12 +176,8 @@ class _HomeState extends State<Home> {
                 bool success = await recordInTime();
                 if(success){
                   fail=false;
-                  setState(() {
-                    _inTimeEnabled = false;
-                    inTime = DateFormat.jm().format(DateTime.now());
-                    userLocationBool = false;
-                    yesNo = true;
-                  });
+                  _inTimeEnabled = false;
+                  inTime = DateFormat.jm().format(DateTime.now());
                   print("In time recorded $inTime");
                 }
                 else{
@@ -195,19 +189,17 @@ class _HomeState extends State<Home> {
                 bool success = await recordOutTime();
                 if(success) {
                   fail = false;
-                  setState(() {
-                    _outTimeEnabled = false;
-                    outTime = DateFormat.jm().format(DateTime.now());
-                    userLocationBool = false;
-                    yesNo = true;
-                  });
+                  _outTimeEnabled = false;
+                  outTime = DateFormat.jm().format(DateTime.now());
                   print("Out time recorded $outTime");
                 }
                 else{
                   fail = true;
                 }
               }
+              userLocationBool = false;
               yesNo = true;
+              setState(() {});
               setVariables();
               Navigator.of(context).pop();
             },
@@ -216,16 +208,17 @@ class _HomeState extends State<Home> {
             elevation: 5.0,
             child: Text("No"),
             onPressed: (){
-              if(inTimeOrOutTime) {
-                print("In-Time not updated $inTime");
-                userLocationBool = false;
-              }
-              else {
-                print("Out-Time not recorded $outTime");
-                userLocationBool = false;
-              }
+//              if(inTimeOrOutTime) {
+//                print("In-Time not updated $inTime");
+//                userLocationBool = false;
+//              }
+//              else {
+//                print("Out-Time not recorded $outTime");
+//                userLocationBool = false;
+//              }
+              userLocationBool = false;
               yesNo = false;
-              setVariables();
+//              setVariables();
               Navigator.of(context).pop();
             },
           )
@@ -271,7 +264,9 @@ class _HomeState extends State<Home> {
   createLocationDialog(BuildContext context){
     return   showDialog(context: context,builder: (context){
       return AlertDialog(
-        title: Text("Too far from Target"),
+        title: Text(
+            "You are not in NIRD campus. If you are on official tour tick check-box and try again."
+        ),
         actions: [
           MaterialButton(
             elevation: 5.0,
@@ -285,17 +280,10 @@ class _HomeState extends State<Home> {
     });
   }
 
-  dynamic getCurrentTime(){
-    currentTime = DateFormat.jm().format(DateTime.now());
-    return currentTime;
-  }
-
   getCurrentLocation() async{
     final geoPosition = await Geolocator().getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-    userLocation = isValidLocation(geoPosition.latitude,geoPosition.longitude);
-    print(userLocationBool);
-    userLocationBool =  await userLocation;
-    setVariables();
+    userLocationBool =  await isValidLocation(geoPosition.latitude,geoPosition.longitude);
+//    setVariables();
     print(userLocationBool);
     setState(() {
       lat = geoPosition.latitude;
@@ -307,7 +295,7 @@ class _HomeState extends State<Home> {
   Widget build(BuildContext context) {
     var _onPressedInTime;
     var _onPressedOutTime;
-
+    print("_inTimeEnabled -  $_inTimeEnabled && isValidUser - $isValidUser");
     if(_inTimeEnabled && isValidUser)
     {
       _onPressedInTime = () async {
@@ -325,7 +313,10 @@ class _HomeState extends State<Home> {
                 createErrorDialog(context);
               }
               else {
+                alertMessage_2 = "In-Time Updated Successfully $inTime";
                 createTimeDialog(context);
+                _inTimeEnabled = false;
+                _outTimeEnabled = true;
               }
             }
 //            if(yesNo){
@@ -344,6 +335,7 @@ class _HomeState extends State<Home> {
           }
           else{
             _inTimeEnabled = false;
+            _outTimeEnabled = true;
 //            await createAlertDialog(context);
 //            if(yesNo){
 //              if(fail){
@@ -354,9 +346,7 @@ class _HomeState extends State<Home> {
 //              }
 //            }
           }
-          alertMessage_2 = "In-Time Updated Successfully $inTime";
           userLocationBool = false;
-          _outTimeEnabled = true;
         }
         else {
           await createLocationDialog(context);
@@ -382,7 +372,9 @@ class _HomeState extends State<Home> {
                 createErrorDialog(context);
               }
               else {
+                alertMessage_2 = "Out-Time Updated Successfully $outTime";
                 createTimeDialog(context);
+                _outTimeEnabled = false;
               }
             }
 //            if(yesNo){
@@ -411,7 +403,6 @@ class _HomeState extends State<Home> {
 //              }
 //            }
           }
-          alertMessage_2 = "Out-Time Updated Successfully $outTime";
           userLocationBool = false;
         }
         else
@@ -425,7 +416,7 @@ class _HomeState extends State<Home> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Employee Attendance App'),
+        title: const Text('NIRDPR Attendance'),
         centerTitle: true,
       ),
       body: ListView(
@@ -646,7 +637,7 @@ class _HomeState extends State<Home> {
                         ),
                         SizedBox(height: 30),
                         Text(
-                          '${DateFormat('dd-MM-yyyy').format(DateTime.now())}',
+                          '$date',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold
@@ -801,14 +792,15 @@ class _HomeState extends State<Home> {
 
     if (response.statusCode == 201 || response.statusCode == 200) {
       print("Status code is either 200 or 201");
-      ValidLocation obj = ValidLocation.fromJson(json.decode(response.body));
-      if(obj.res == 1) {
-        print(obj.res);
+      Map<String, dynamic> obj = jsonDecode(response.body);
+      int res = obj['d'];
+      if(res == 1) {
+        print(res);
         userLocationBool = true;
         return true;
       }
       else {
-        print(obj.res);
+        print(res);
         userLocationBool = false;
         return false;
       }
@@ -822,9 +814,6 @@ class _HomeState extends State<Home> {
   Future<UserDetails> getUserData() async {
     print('inside getUserData');
     print(_mobileNumber);
-//    if(_mobileNumber.isEmpty){
-//      await
-//    }
     http.Response response;
     try{
       response = await http.post(
@@ -833,7 +822,7 @@ class _HomeState extends State<Home> {
           'Content-Type': 'application/json; charset=UTF-8'
         },
         body: jsonEncode(<String, String>{
-          'mobileNo': _mobileNumber, //'9849298244' // TODO: _mobileNumber
+          'mobileNo': '9963255924', //'9849298244' // TODO: _mobileNumber
           'key': 'TmlyZHByQ0lDVDc4Ng=='
         }),
       );
@@ -842,7 +831,6 @@ class _HomeState extends State<Home> {
       throw Error();
     }
 
-    print('reaches here');
     print(response.body);
 
     if (response.statusCode == 201 || response.statusCode == 200) {
@@ -862,53 +850,39 @@ class _HomeState extends State<Home> {
   }
 }
 
-class ValidLocation {
-  int res;
-  ValidLocation(
-      {this.res}
-      );
-  factory ValidLocation.fromJson(Map<String, dynamic> json) {
-    return ValidLocation(
-      res: json['d'],
-    );
-  }
-}
-
 class UserDetails{
   String name;
   String centerName;
   String mobileNo;
+  DateTime inTime;
+  DateTime outTime;
   String d;
 
   UserDetails({this.name, this.centerName, this.mobileNo, this.d});
 
   void parseString(String mobileNo){
     this.mobileNo = mobileNo;
-    name='';
-    centerName='';
-//    print(d);
-    int i=0;
-    while(i<d.length && d[i] != ':'){
-      i++;
-    }
-    i+=2;
-    while(i<d.length && d[i] != '"'){
-      name+= d[i];
-      i++;
+    Map<String, dynamic> result = jsonDecode(d);
+
+    if(result.containsKey('Name')){
+      name = result['Name'];
     }
 //    print(name);
-    i+=3;
 
-    while(i<d.length && d[i] != ':'){
-      i++;
-    }
-    i+=2;
-    while(i<d.length && d[i] != '"'){
-      centerName += d[i];
-      i++;
+    if(result.containsKey('Center')){
+      centerName = result['Center'];
     }
 //    print(centerName);
-    i+=3;
+
+    if(result.containsKey('inTime')  && result['inTime'].isNotEmpty){
+      inTime = DateTime.parse(result['inTime']);
+    }
+//    print(inTime);
+
+    if(result.containsKey('outTime') && result['outTime'].isNotEmpty){
+      outTime = DateTime.parse(result['outTime']);
+    }
+//    print(outTime);
   }
 
   factory UserDetails.fromJson(Map<String, dynamic> json) {

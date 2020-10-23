@@ -66,7 +66,7 @@ class _LoadingState extends State<Loading> {
                       padding: EdgeInsets.only(top: 20.0),
                     ),
                     Text(
-                      "Employee Attendance App",
+                      "Employee Attendance",
                       softWrap: true,
                       textAlign: TextAlign.center,
                       style: TextStyle(
