@@ -4,7 +4,7 @@ import 'package:tutorial_project/pages/home.dart';
 
 void main() => runApp(
   MaterialApp(
-    title: 'Employee Attendance App',
+    title: 'Attendance App',
     routes:{
       '/' : (content) => Loading(),
       '/home' : (content) => Home(),
