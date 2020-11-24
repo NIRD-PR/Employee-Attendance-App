@@ -11,7 +11,7 @@ class _LoadingState extends State<Loading> {
   void initState() {
     // TODO: implement initState
     super.initState();
-    Timer(Duration(seconds: 3), () => Navigator.pushReplacementNamed(context, "/home"));
+    Timer(Duration(seconds: 1), () => Navigator.pushReplacementNamed(context, "/home"));
   }
 
   @override
@@ -66,7 +66,7 @@ class _LoadingState extends State<Loading> {
                       padding: EdgeInsets.only(top: 20.0),
                     ),
                     Text(
-                      "Employee Attendance",
+                      "Attendance App",
                       softWrap: true,
                       textAlign: TextAlign.center,
                       style: TextStyle(

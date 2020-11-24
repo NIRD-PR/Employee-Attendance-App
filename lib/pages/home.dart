@@ -28,6 +28,7 @@ class _HomeState extends State<Home> {
   bool isValidUser = false;
   double testVar;
   bool fail=false;
+  bool _isOnCompanyTour=false;
 
   String _mobileNumber = '';
   String alertMessage_1 = "Do you wish to override your IN Time?";
@@ -173,7 +174,13 @@ class _HomeState extends State<Home> {
             child: Text("Yes"),
             onPressed: () async {
               if(inTimeOrOutTime) {
-                bool success = await recordInTime();
+                bool success;
+                if(_isOnCompanyTour) {
+                  success = await recordInTime(1);
+                }
+                else{
+                  success = await recordInTime(0);
+                }
                 if(success){
                   fail=false;
                   _inTimeEnabled = false;
@@ -265,7 +272,7 @@ class _HomeState extends State<Home> {
     return   showDialog(context: context,builder: (context){
       return AlertDialog(
         title: Text(
-            "You are not in NIRD campus. If you are on official tour tick check-box and try again."
+            "You are not in NIRD campus. If you are on official visit/tour tick check-box and try again."
         ),
         actions: [
           MaterialButton(
@@ -302,7 +309,12 @@ class _HomeState extends State<Home> {
         inTimeOrOutTime = true;
         alertMessage_1 = "Once IN-Time is recorded, it can not be changed. Do you want to continue?";
 //        alertMessage_1 = "Do you wish to override your IN Time?";
-        await getCurrentLocation();
+        if(!_isOnCompanyTour) {
+          await getCurrentLocation();
+        }
+        else{
+          userLocationBool=true;
+        }
         if(userLocationBool)
         {
           if(inTime.isEmpty)
@@ -363,7 +375,14 @@ class _HomeState extends State<Home> {
         inTimeOrOutTime = false;
         alertMessage_1 = "Once OUT-Time is recorded, it can not be changed. Do you want to continue?";
 //        alertMessage_1 = "Do you wish to override your OUT Time?";
-        await getCurrentLocation();
+        UserDetails user = await getUserData();
+        _isOnCompanyTour = user.isontour;
+        if(!_isOnCompanyTour) {
+          await getCurrentLocation();
+        }
+        else{
+          userLocationBool=true;
+        }
         if(userLocationBool) {
           if (outTime.isEmpty) {
             await createAlertDialog(context);
@@ -416,7 +435,7 @@ class _HomeState extends State<Home> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('NIRDPR Attendance'),
+        title: const Text('Attendance App'),
         centerTitle: true,
       ),
       body: ListView(
@@ -635,7 +654,25 @@ class _HomeState extends State<Home> {
                             ),
                           ],
                         ),
-                        SizedBox(height: 30),
+                        SizedBox(height: 8),
+                        CheckboxListTile(
+                          value: _isOnCompanyTour,
+                          onChanged: (value){
+                            setState(() {
+                              _isOnCompanyTour = value;
+                            });
+                          },
+                          title: Text(
+                            "Are you on official visit/tour?",
+                            style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.1,
+                            ),
+                          ),
+                          controlAffinity: ListTileControlAffinity.leading,
+                        ),
+                        SizedBox(height: 13),
                         Text(
                           '$date',
                           style: TextStyle(
@@ -702,12 +739,29 @@ class _HomeState extends State<Home> {
             ),
           ],
         ),
+//          CheckboxListTile(
+//            value: _isOnCompanyTour,
+//            onChanged: (value){
+//              setState(() {
+//                _isOnCompanyTour = value;
+//              });
+//            },
+//            title: Text(
+//              "Are you On a Company Tour?",
+//              style: TextStyle(
+//                fontSize: 17,
+//                fontWeight: FontWeight.bold,
+//                letterSpacing: 1.1,
+//              ),
+//            ),
+//            controlAffinity: ListTileControlAffinity.leading,
+//          ),
         ],
       ),
     );
   }
 
-  Future<bool> recordInTime() async{
+  Future<bool> recordInTime(int isontour) async{
     print('inside recordInTime');
     final http.Response response = await http.post(
       'http://career.nirdpr.in/Services/Service.svc/markIntimeattendance',
@@ -715,7 +769,7 @@ class _HomeState extends State<Home> {
         'Content-Type': 'application/json; charset=UTF-8'
       },
       body: jsonEncode(<String, String>{
-        'jsonreq':'{\"latitude\":\"$lat\",\"longitude\":\"$lon\",\"phone\":\"$_mobileNumber\"}', // TODO:$_mobileNumber
+        'jsonreq':'{\"latitude\":\"$lat\",\"longitude\":\"$lon\",\"phone\":\"$_mobileNumber\", \"isontour\" : \"$isontour\"}', // TODO:$_mobileNumber
         'key' : 'TmlyZHByQ0lDVDc4Ng='
       }),
     );
@@ -822,7 +876,7 @@ class _HomeState extends State<Home> {
           'Content-Type': 'application/json; charset=UTF-8'
         },
         body: jsonEncode(<String, String>{
-          'mobileNo': '9963255924', //'9849298244' // TODO: _mobileNumber
+          'mobileNo': _mobileNumber, //'9849298244' '9013322645' // TODO: _mobileNumber
           'key': 'TmlyZHByQ0lDVDc4Ng=='
         }),
       );
@@ -857,6 +911,7 @@ class UserDetails{
   DateTime inTime;
   DateTime outTime;
   String d;
+  bool isontour;
 
   UserDetails({this.name, this.centerName, this.mobileNo, this.d});
 
@@ -883,6 +938,15 @@ class UserDetails{
       outTime = DateTime.parse(result['outTime']);
     }
 //    print(outTime);
+    if(result.containsKey('isontour') && result['isontour'].isNotEmpty){
+      String temp = result['isontour'];
+      if(temp == "1"){
+        isontour = true;
+      }
+      else{
+        isontour = false;
+      }
+    }
   }
 
   factory UserDetails.fromJson(Map<String, dynamic> json) {
